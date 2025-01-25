@@ -1,40 +1,33 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <VL53L0X.h>
-#include "Proximity_Gesture/tof_gestures.h"
-#include "Proximity_Gesture/tof_gestures_DIRSWIPE_1.h"
-#include "Proximity_Gesture/tof_gestures_TAP_1.h"
 #include <FastLED.h>
+
+//#define _TEST 1
+#ifdef _TEST
+#include "../lib/TofGestures/Test_TofGestures.hpp"
+#endif
 
 // LED SETUP
 #define NUM_LEDS 50
-#define DATA_PIN 2
+#define DATA_PIN 4
 #define LED_VOLTS 5
 #define LED_MA 500
 #define BRIGHTNESS 60
 #define CHIPSET WS2812B
-
 CRGB leds[NUM_LEDS];
+uint8_t num_segments = 11;
+uint8_t led_segments[] = {1, 2, 3, 4, 4, 6, 7, 6, 7, 6, 4}; //segment 5, led 3 is missing
 
 
 // VL53L0X SENSOR SETUP
 // The number of sensors in your system.
 #define SENSOR_COUNT 3
-// The Arduino pin connected to the XSHUT pin of each sensor.
-const uint8_t xshutPins[SENSOR_COUNT] = { 4, 5, 6 };
 VL53L0X sensors[SENSOR_COUNT];
-uint16_t distances[SENSOR_COUNT];
-Gesture_DIRSWIPE_1_Data_t gestureDirSwipeData[SENSOR_COUNT];
-Gesture_TAP_1_Data_t gestureTapData[SENSOR_COUNT];
-int dirswipes[SENSOR_COUNT];
-int taps[SENSOR_COUNT];
+const uint8_t xshutPins[SENSOR_COUNT] = { 6, 7, 8 }; //s, 
 uint16_t update_delay = 500;
-int8_t dir = 1;
 
-//segment 5, led 3 is missing
-uint8_t num_segments = 11;
-uint8_t led_segments[] = {1, 2, 3, 4, 4, 6, 7, 6, 7, 6, 4};
-// pretent the heart is on a 13 x 11 grid?
+
 
 
 void march();
@@ -42,6 +35,16 @@ void march();
 void setup() {
   while (!Serial) {}
   Serial.begin(115200);
+  Serial.println("Loveheart 0.1");
+
+#ifdef _TEST
+  Serial.println("Running tests...");
+  TEST_RingBuffer();
+  Serial.println("... Tests complete!");
+  while(1);
+#endif
+
+
   Wire.begin();
   Wire.setClock(400000); // use 400 kHz I2C
 
@@ -53,12 +56,14 @@ void setup() {
   FastLED.setBrightness(BRIGHTNESS);
   FastLED.clear();
   FastLED.show();
+  Serial.println("FastLED initialized.");
 
   // Disable/reset all sensors by driving their XSHUT pins low.
   for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
     pinMode(xshutPins[i], OUTPUT);
     digitalWrite(xshutPins[i], LOW);
   }
+  delay(100);
 
   // Enable, initialize, and start each sensor, one by one.
   for (uint8_t i = 0; i < SENSOR_COUNT; i++)
@@ -71,79 +76,44 @@ void setup() {
     sensors[i].setTimeout(500);
     if (!sensors[i].init()) {
       Serial.print("Failed to detect and initialize sensor ");
-      Serial.println(i);
+      Serial.print(i);
+      Serial.print("Halting.");
       while (1);
     }
     // Give each sensor a unique address, incrementing from  0x2A.
     sensors[i].setAddress(0x2A + i);
-    sensors[i].startContinuous(50);
+    Serial.print("Initialized sensor  ");
+    Serial.println(i);
   }
-
   for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-    tof_gestures_initTAP_1(&gestureTapData[i]);
-    tof_gestures_initDIRSWIPE_1(400, 0, 1000, &gestureDirSwipeData[i]); 
+    Serial.print("Sensor "); Serial.print(i); Serial.println(":"); 
+    Serial.print("Measurement timing budget: ");
+    Serial.println(sensors[i].getMeasurementTimingBudget());
+    Serial.print("Timeout: ");
+    Serial.println(sensors[i].getTimeout());
+    sensors[i].startContinuous(100);
   }
+  // for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+  //   tof_gestures_initTAP_1(&gestureTapData[i]);
+  //   tof_gestures_initDIRSWIPE_1(400, 0, 1000, &gestureDirSwipeData[i]); 
+  // }
+  Serial.println("VL53 sensors initialized.");
 
 }
 
 void loop() {
-  // for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
-  //   Serial.print(sensors[i].readRangeContinuousMillimeters());
-  //   if (sensors[i].timeoutOccurred()) { Serial.print(" TIMEOUT"); }
-  //   Serial.print('\t');
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
+    Serial.print(sensors[i].readRangeContinuousMillimeters());
+    if (sensors[i].timeoutOccurred()) { Serial.print("TMOUT"); }
+    Serial.print('\t');
+  }
+  Serial.println();
+
+  // for (uint8_t i = 0; i < NUM_LEDS; i++) {
+  //   leds[i] = CRGB::Red;
   // }
-  // Serial.println();
-
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {    
-    distances[i] = sensors[i].readRangeContinuousMillimeters();
-  }
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {    
-    taps[i] = sensors[i].readRangeContinuousMillimeters();
-  }
-  dirswipes[0] = tof_gestures_detectDIRSWIPE_1(distances[0], distances[1], &gestureDirSwipeData[0]);
-  dirswipes[1] = tof_gestures_detectDIRSWIPE_1(distances[1], distances[2], &gestureDirSwipeData[1]);
-  dirswipes[2] = tof_gestures_detectDIRSWIPE_1(distances[0], distances[2], &gestureDirSwipeData[2]);
-
-  if (taps[0] == GESTURES_SINGLE_TAP ){
-  }
-  if (taps[1] == GESTURES_SINGLE_TAP ){
-  }
-  if (taps[2] == GESTURES_SINGLE_TAP ){
-  }
-  // if (taps[0] == GESTURES_DOUBLE_TAP ){
-  // }
-
-  
-  if (dirswipes[0] == GESTURES_SWIPE_LEFT_RIGHT && dirswipes[1] == GESTURES_SWIPE_LEFT_RIGHT){
-    // action RIGHT
-    dir = 1;
-  }
-  if (dirswipes[0] == GESTURES_SWIPE_RIGHT_LEFT && dirswipes[1] == GESTURES_SWIPE_RIGHT_LEFT){
-    // action LEFT
-    dir = -1;
-  }
-  if (dirswipes[0] == GESTURES_SWIPE_LEFT_RIGHT && dirswipes[1] == GESTURES_SWIPE_RIGHT_LEFT){
-    // action DOWN
-    update_delay -= 100;
-    if (update_delay < 100) {
-      update_delay = 100;
-    }
-  }
-  if (dirswipes[0] == GESTURES_SWIPE_RIGHT_LEFT && dirswipes[1] == GESTURES_SWIPE_LEFT_RIGHT){
-    // action UP
-    update_delay += 100;
-    if (update_delay > 2000){
-      update_delay = 2000;
-    }
-  }
-
-
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
-    leds[i] = CRGB::Red;
-  }
-
-  march();
-  FastLED.show();
+  // march();
+  // FastLED.show();
   FastLED.delay(update_delay);
 }
 
