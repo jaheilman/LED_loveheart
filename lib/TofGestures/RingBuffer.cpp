@@ -1,10 +1,15 @@
 #include <Arduino.h>
-#include "CircularBuffer.hpp"
+#include "RingBuffer.hpp"
 
 
-RingBuffer::RingBuffer() : head(0), tail(0), count(0) {
+RingBuffer::RingBuffer(size_t buffer_capacity) : head(0), tail(0), count(0) {
+    buf_capacity = buffer_capacity;
+    if (buffer_capacity > RINGBUFFER_MAX_CAPACITY) {
+        Serial.println("Ring buffer max exceeded; initializing to max capacity");
+        buf_capacity = RINGBUFFER_MAX_CAPACITY;
+    }
     // Initialize the buffer with zeros
-    for (size_t i = 0; i < SIZE; ++i) {
+    for (size_t i = 0; i < RINGBUFFER_MAX_CAPACITY; ++i) {
         buffer[i] = 0;
     }
 }
@@ -12,21 +17,21 @@ RingBuffer::RingBuffer() : head(0), tail(0), count(0) {
 // Add an element to the buffer
 void RingBuffer::push(uint16_t value) {
     if (is_full()) {
-        // Serial.println("Circular buffer is full");
+        // Serial.println("Buffer overflow");
     }
     buffer[head] = value;
-    head = (head + 1) % SIZE;
+    head = (head + 1) % buf_capacity;
     ++count;
 }
 
 // Remove an element from the buffer
 uint16_t RingBuffer::pop() {
     if (is_empty()) {
-        Serial.println("Circular buffer is empty");
+        Serial.println("Buffer underflow");
         return 0;
     }
     uint16_t value = buffer[tail];
-    tail = (tail + 1) % SIZE;
+    tail = (tail + 1) % buf_capacity;
     --count;
     return value;
 }
@@ -36,7 +41,7 @@ uint16_t RingBuffer::get(size_t index) const {
         Serial.println("Circular buffer is empty");
         return 0;
     }
-    size_t i = (tail + index) % SIZE;
+    size_t i = (tail + index) % buf_capacity;
     uint16_t value = buffer[i];
     return value;
 }
@@ -48,7 +53,7 @@ bool RingBuffer::is_empty() const {
 
 // Check if the buffer is full
 bool RingBuffer::is_full() const {
-    return count == SIZE;
+    return count == buf_capacity;
 }
 
 // Get the current size of the buffer

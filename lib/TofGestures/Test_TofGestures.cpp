@@ -1,5 +1,5 @@
 
-#include "CircularBuffer.hpp"
+#include "RingBuffer.hpp"
 
 void TEST_RingBuffer() {
     // Test Ring buffer

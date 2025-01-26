@@ -1,6 +1,6 @@
 #ifndef _TAPDETECTION_HPP_
 #define _TAPDETECTION_HPP_
-#include "CircularBuffer.hpp"
+#include "RingBuffer.hpp"
 
 enum Gestures_t{
     NO_GESTURE                      = 0,    /*!< No gesture detected */
@@ -22,18 +22,22 @@ enum Gestures_t{
     DISCARDED_TOO_FAST              = -4,   /*!< Gesture is discarded because it is too fast */
 };
 
+namespace {
+    const int8_t TAP_BUFFER_SIZE    = 10;
+}
+
 class TapDetection {
 public:
     TapDetection();
     int update(uint16_t distance);
     int get_gesture();
-    uint16_t movement_threashold = 5;   // mm
-    uint16_t abs_threshold = 20;        // mm
-    bool floating_threshold = false;    // allow floating threshold
+    uint16_t tap_change_threshold = 50;   // mm
+    uint16_t abs_threshold = 30;         // mm
+    bool floating_threshold = false;     // allow floating threshold
 
 private:
-    RingBuffer distances;
- 
+    RingBuffer distances();
+
 };
 
 #endif //_TAPDETECTION_HPP_

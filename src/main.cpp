@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <FastLED.h>
+#include "TapDetection.hpp"
 
 //#define _TEST 1
 #ifdef _TEST
@@ -25,10 +26,10 @@ uint8_t led_segments[] = {1, 2, 3, 4, 4, 6, 7, 6, 7, 6, 4}; //segment 5, led 3 i
 #define SENSOR_COUNT 3
 VL53L0X sensors[SENSOR_COUNT];
 const uint8_t xshutPins[SENSOR_COUNT] = { 6, 7, 8 }; //s, 
-uint16_t update_delay = 500;
+uint16_t update_delay = 200;
 
-
-
+uint16_t distances[SENSOR_COUNT];
+TapDetection Taps[SENSOR_COUNT];
 
 void march();
 
@@ -80,10 +81,10 @@ void setup() {
       Serial.print("Halting.");
       while (1);
     }
-    // Give each sensor a unique address, incrementing from  0x2A.
-    sensors[i].setAddress(0x2A + i);
-    Serial.print("Initialized sensor  ");
+    Serial.print("Initializing sensor  ");
     Serial.println(i);
+    sensors[i].setAddress(0x2A + i);
+    sensors[i].setTimeout(update_delay/2);
   }
   for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
     Serial.print("Sensor "); Serial.print(i); Serial.println(":"); 
@@ -91,23 +92,41 @@ void setup() {
     Serial.println(sensors[i].getMeasurementTimingBudget());
     Serial.print("Timeout: ");
     Serial.println(sensors[i].getTimeout());
-    sensors[i].startContinuous(100);
+    sensors[i].startContinuous(update_delay);
   }
-  // for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-  //   tof_gestures_initTAP_1(&gestureTapData[i]);
-  //   tof_gestures_initDIRSWIPE_1(400, 0, 1000, &gestureDirSwipeData[i]); 
-  // }
   Serial.println("VL53 sensors initialized.");
+
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
+    
+  }
 
 }
 
 void loop() {
   for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
-    Serial.print(sensors[i].readRangeContinuousMillimeters());
-    if (sensors[i].timeoutOccurred()) { Serial.print("TMOUT"); }
-    Serial.print('\t');
+    distances[i] = sensors[i].readRangeContinuousMillimeters();
+    if (sensors[i].timeoutOccurred()) { 
+      distances[i] = 501; 
+    }
+    if (distances[i] < 20) {
+      distances[i] = 500;
+    }
+    Taps[i].update(distances[i]);
   }
-  Serial.println();
+
+  // for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
+  //   Serial.print(distances[i]);
+  //   Serial.print('\t');
+  // }
+  // Serial.println();
+
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
+    if (Taps[i].get_gesture() > 0) {
+      Serial.print("Tap detected on sensor "); Serial.println(i);
+    }
+
+  }
+
 
   // for (uint8_t i = 0; i < NUM_LEDS; i++) {
   //   leds[i] = CRGB::Red;
