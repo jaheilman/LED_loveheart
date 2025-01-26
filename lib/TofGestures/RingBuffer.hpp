@@ -97,7 +97,7 @@ public:
         if (is_empty()) {
             return 0;
         }
-        T minval = UINT16_MAX;  // bad assumption
+        T minval = get(i); 
         for (size_t i = 0; i < size(); ++i) {
             if (get(i) < minval) {
                 minval = get(i);
@@ -110,7 +110,7 @@ public:
         if (is_empty()) {
             return 0;
         }
-        T maxval = 0;           // bad assumption
+        T maxval = get(i); 
         for (size_t i = 0; i < size(); ++i) {
             if (get(i) > maxval) {
                 maxval = get(i);
