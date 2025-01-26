@@ -1,26 +1,32 @@
 #ifndef _RINGBUFFER_HPP_
 #define _RINGBUFFER_HPP_
 
-#include <Arduino.h>
+/* A ring buffer implementation that can be created with arbitrary simple type and size
+ * Ex:
+ * RingBuffer<int> int_rb(10);
+ * RingBuffer<float> float_rb(23);
+ */
 
+#include <Arduino.h>
+template <typename T>
 class RingBuffer {
 private:
-    uint16_t* buffer;
+    T* buffer;
     size_t head; // Points to the next insertion position
     size_t tail; // Points to the next removal position
     size_t count; // Tracks the number of elements in the buffer
     size_t buf_capacity;
 
 public:
-    RingBuffer(size_t buffer_capacity) : buf_capacity(buffer_capacity), head(0), tail(0), count(0) {
-        buffer = new uint16_t[buf_capacity];
+    RingBuffer(size_t buffer_capacity) : head(0), tail(0), count(0), buf_capacity(buffer_capacity) {
+        buffer = new T[buf_capacity];
         for (size_t i = 0; i < buf_capacity; ++i) {
             buffer[i] = 0;
         }
     }
 
     // Add an element to the buffer
-    bool push(uint16_t value) {
+    bool push(T value) {
         if (is_full()) {
             // Serial.println("Buffer overflow");
             return false;
@@ -32,7 +38,7 @@ public:
     }
 
     // Remove an element from the buffer
-    uint16_t pop() {
+    T pop() {
         if (is_empty()) {
             Serial.println("Buffer underflow");
             return 0;
@@ -43,7 +49,7 @@ public:
         return value;
     }
 
-    uint16_t get(size_t index) const {
+    T get(size_t index) const {
         if (is_empty()) {
             Serial.println("Circular buffer is empty");
             return 0;
@@ -51,6 +57,12 @@ public:
         size_t i = (tail + index) % buf_capacity;
         uint16_t value = buffer[i];
         return value;
+    }
+
+    void clear() {
+        head = 0;
+        tail = 0;
+        count = 0;
     }
 
     // Check if the buffer is empty
