@@ -1,6 +1,6 @@
 #ifndef _TAPDETECTION_HPP_
 #define _TAPDETECTION_HPP_
-#include "CircularBuffer.hpp"
+#include "RingBuffer.hpp"
 
 enum Gestures_t{
     NO_GESTURE                      = 0,    /*!< No gesture detected */
@@ -36,7 +36,7 @@ public:
     bool floating_threshold = false;     // allow floating threshold
 
 private:
-    CircularBuffer distances();
+    RingBuffer<uint16_t> distances();
 
 };
 

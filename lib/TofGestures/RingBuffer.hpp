@@ -5,6 +5,8 @@
  * Ex:
  * RingBuffer<int> int_rb(10);
  * RingBuffer<float> float_rb(23);
+ * 
+ * Don't try to send it objects or anything that passes by reference or pointer
  */
 
 #include <Arduino.h>
@@ -80,22 +82,22 @@ public:
     }
         size_t capacity() const;            // max buffer size 
 
-    uint16_t buf_mean() const {
+    T buf_mean() const {
         if (is_empty()) {
             return 0;
         }
-        uint32_t sum = 0;
+        T sum = 0;
         for (size_t i = 0; i < size(); ++i) {
             sum += get(i);
         }
-        return uint16_t(sum / size());
+        return T(sum / size());
     }
 
-    uint16_t buf_min() const {
+    T buf_min() const {
         if (is_empty()) {
             return 0;
         }
-        uint16_t minval = UINT16_MAX;
+        T minval = UINT16_MAX;  // bad assumption
         for (size_t i = 0; i < size(); ++i) {
             if (get(i) < minval) {
                 minval = get(i);
@@ -104,11 +106,11 @@ public:
         return minval;
     }
 
-    uint16_t buf_max() const {
+    T buf_max() const {
         if (is_empty()) {
             return 0;
         }
-        uint16_t maxval = 0;
+        T maxval = 0;           // bad assumption
         for (size_t i = 0; i < size(); ++i) {
             if (get(i) > maxval) {
                 maxval = get(i);
