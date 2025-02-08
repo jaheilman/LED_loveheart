@@ -97,7 +97,7 @@ public:
         if (is_empty()) {
             return 0;
         }
-        T minval = get(i); 
+        T minval = get(0); 
         for (size_t i = 0; i < size(); ++i) {
             if (get(i) < minval) {
                 minval = get(i);
@@ -110,7 +110,7 @@ public:
         if (is_empty()) {
             return 0;
         }
-        T maxval = get(i); 
+        T maxval = get(0); 
         for (size_t i = 0; i < size(); ++i) {
             if (get(i) > maxval) {
                 maxval = get(i);

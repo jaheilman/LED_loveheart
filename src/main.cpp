@@ -127,8 +127,12 @@ void loop() {
     }
 
   }
-
-
+ 
+  static int led_indx = 0;
+  leds[led_indx] = CRGB::Red;
+  if (++led_indx > NUM_LEDS) {
+    led_indx = 0;
+  }
   // for (uint8_t i = 0; i < NUM_LEDS; i++) {
   //   leds[i] = CRGB::Red;
   // }
