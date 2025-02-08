@@ -129,15 +129,21 @@ void loop() {
   }
  
   static int led_indx = 0;
-  leds[led_indx] = CRGB::Red;
+  static CRGB mycolor = CRGB::Red;
+  leds[led_indx] = mycolor;
   if (++led_indx > NUM_LEDS) {
     led_indx = 0;
+    if (mycolor == CRGB::Red){
+      mycolor = CRGB::Green;
+    } else {
+      mycolor = CRGB::Red;
+    }
   }
   // for (uint8_t i = 0; i < NUM_LEDS; i++) {
   //   leds[i] = CRGB::Red;
   // }
   // march();
-  // FastLED.show();
+  FastLED.show();
   FastLED.delay(update_delay);
 }
 

@@ -121,17 +121,4 @@ public:
 };
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #endif // _RINGBUFFER_HPP_
