@@ -10,7 +10,7 @@
 #include "../lib/TofGestures/Test_TofGestures.hpp"
 #endif
 
-#define DISTACE_SENSORS 1
+#define ENABLE_DISTANCE_SENSORS 1
 
 
 // LED SETUP
@@ -32,9 +32,14 @@ uint16_t rainbow_counter = 0;
 VL53L0X sensors[SENSOR_COUNT];
 const uint8_t xshutPins[SENSOR_COUNT] = { 6, 7, 8 }; //s, 
 uint16_t update_delay = 200;
-
-uint16_t distances[SENSOR_COUNT];
+// uint16_t distances[SENSOR_COUNT];
 TapDetection Taps[SENSOR_COUNT];
+RingBuffer<uint16_t> test_ring = RingBuffer<uint16_t>(16);
+size_t refresh = 0;
+uint16_t dist = 0;
+
+// Serial buffer
+char buffer[50];
 
 void march();
 
@@ -65,7 +70,7 @@ void setup() {
   Serial.println("FastLED initialized.");
 
   // Enable, initialize, and start each sensor, one by one.
-  if (DISTACE_SENSORS) {
+  if (ENABLE_DISTANCE_SENSORS) {
       // Disable/reset all sensors by driving their XSHUT pins low.
     for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
       pinMode(xshutPins[i], OUTPUT);
@@ -81,9 +86,8 @@ void setup() {
       delay(10);
       sensors[i].setTimeout(500);
       if (!sensors[i].init()) {
-        Serial.print("Failed to detect and initialize sensor ");
-        Serial.print(i);
-        Serial.print("Halting.");
+        sprintf(buffer,"FAIL INIT sensor %d, halting.", i);
+        Serial.print(buffer);
         while (1);
       }
       Serial.print("Initializing sensor  ");
@@ -109,26 +113,25 @@ void setup() {
 }
 
 void loop() {
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
-    distances[i] = sensors[i].readRangeContinuousMillimeters();
+  for (size_t i = 0; i < SENSOR_COUNT; i++)  {
+    dist = sensors[i].readRangeContinuousMillimeters();
     if (sensors[i].timeoutOccurred()) { 
-      distances[i] = 501; 
+      dist = 202; 
     }
-    if (distances[i] < 20) {
-      distances[i] = 500;
+    if (dist > 202) { 
+      dist = 201; 
     }
-    Taps[i].update(distances[i]);
+    if (dist < 20) {
+      dist = 200;
+    }
+    Taps[i].update(dist);
   }
 
-  if (DISTACE_SENSORS){
-    for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
-      Serial.print(distances[i]);
-      Serial.print('\t');
-    }
-  }
-  Serial.println();
 
   for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
+    // if (Taps[i].get_gesture() == Gestures_t::NOT_READY) {
+    //   Serial.print("Sensor not ready "); Serial.println(i);
+    // }
     if (Taps[i].get_gesture() > 0) {
       Serial.print("Tap detected on sensor "); Serial.println(i);
     }
@@ -136,14 +139,14 @@ void loop() {
   }
  
   static int led_indx = 0;
-  static CRGB mycolor = CRGB::Red;
+  static CRGB mycolor = CRGB::Blue;
   leds[led_indx] = mycolor;
   if (++led_indx > NUM_LEDS) {
     led_indx = 0;
-    if (mycolor == CRGB::Red){
-      mycolor = CRGB::Green;
+    if (mycolor == CRGB::Blue){
+      mycolor = CRGB::Purple;
     } else {
-      mycolor = CRGB::Red;
+      mycolor = CRGB::Blue;
     }
   }
   // for (uint8_t i = 0; i < NUM_LEDS; i++) {

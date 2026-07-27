@@ -2,6 +2,9 @@
 #define _TAPDETECTION_HPP_
 #include "RingBuffer.hpp"
 
+#define  TAP_BUFFER_SIZE 16
+
+
 enum Gestures_t{
     NO_GESTURE                      = 0,    /*!< No gesture detected */
     SINGLE_TAP                      = 1,    /*!< Single tap detected */
@@ -22,9 +25,8 @@ enum Gestures_t{
     DISCARDED_TOO_FAST              = -4,   /*!< Gesture is discarded because it is too fast */
 };
 
-namespace {
-    const int8_t TAP_BUFFER_SIZE    = 10;
-}
+
+
 
 class TapDetection {
 public:
@@ -35,8 +37,9 @@ public:
     uint16_t abs_threshold = 30;         // mm
     bool floating_threshold = false;     // allow floating threshold
 
-private:
-    RingBuffer<uint16_t> distances();
+
+// private:
+    RingBuffer<uint16_t> distances{TAP_BUFFER_SIZE};  // note {} not () 
 
 };
 

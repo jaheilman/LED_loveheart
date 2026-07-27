@@ -6,30 +6,29 @@ namespace {
     const int8_t INCREASING    = 1;
 }
 
-TapDetection::TapDetection() {
-
-}
+TapDetection::TapDetection() {}
 
 int TapDetection::update(uint16_t distance) {
-    // distances.push(distance);
-    return get_gesture();
+    distances.push(distance);
+    return 0;
+    //return get_gesture();
 }
 
-int TapDetection::get_gesture() {
-    int taps_detected = 0;
-    // if (distances.size() < 16) {
-    //     return Gestures_t::NOT_READY;
-    // }
-    // // todo: actual gesture logic
 
-    // int8_t direction = CONSTANT;
-    // for (size_t i = 1; i < distances.size(); i++) {
-    //     if (   (distances.get(i-1) > distances.get(i) + tap_change_threshold) 
-    //        &&  (distances.get(i+1) > distances.get(i) + tap_change_threshold)
-    //     ) {
-    //         ++taps_detected;
-    //     }
-    // }
+int TapDetection::get_gesture() {
+    if (distances.size() < TAP_BUFFER_SIZE) {
+        return Gestures_t::NOT_READY;
+    }
+
+    int taps_detected = 0;
+    for (size_t i = 1; i < distances.size() - 1; ++i) {
+        if ((distances.get(i - 1) > distances.get(i) + tap_change_threshold) &&
+            (distances.get(i + 1) > distances.get(i) + tap_change_threshold))
+        {
+            ++taps_detected;
+        }
+    }
+
     return taps_detected;
 }
 

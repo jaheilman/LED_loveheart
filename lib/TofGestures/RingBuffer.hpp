@@ -29,10 +29,10 @@ public:
 
     // Add an element to the buffer
     bool push(T value) {
-        if (is_full()) {
-            // Serial.println("Buffer overflow");
-            return false;
-        }
+        // if (is_full()) {
+        //     // Serial.println("Buffer overflow");
+        //     return false;
+        // }
         buffer[head] = value;
         head = (head + 1) % buf_capacity;
         ++count;
@@ -58,6 +58,20 @@ public:
         }
         size_t i = (tail + index) % buf_capacity;
         uint16_t value = buffer[i];
+        return value;
+    }
+
+    // Get the value at a specific index without regarding the head and tail positions
+    T get_raw(size_t index) const {
+        if (is_empty()) {
+            Serial.println("Circular buffer is empty");
+            return 0;
+        }
+        if ((index >= buf_capacity)) {
+            Serial.println("Index out of bounds");
+            return 0;
+        }
+        uint16_t value = buffer[index];
         return value;
     }
 
