@@ -90,11 +90,16 @@ public:
     bool is_full() const {
         return count == buf_capacity;
     }
+
     // Get the current size of the buffer
     size_t size() const {
         return count;
     }
-        size_t capacity() const;            // max buffer size 
+
+    // max buffer size 
+    size_t capacity() const {
+        return buf_capacity;
+    }           
 
     T buf_mean() const {
         if (is_empty()) {

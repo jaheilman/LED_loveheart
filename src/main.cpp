@@ -21,27 +21,43 @@
 #define BRIGHTNESS 60
 #define CHIPSET WS2812B
 CRGB leds[NUM_LEDS];
-uint8_t num_segments = 11;
-uint8_t led_segments[] = {1, 2, 3, 4, 4, 6, 7, 6, 7, 6, 4}; //segment 5, led 3 is missing
-uint16_t rainbow_counter = 0;
 
+uint8_t led_segments[] = {1, 2, 3, 4, 4, 6, 7, 6, 7, 6, 4}; //segment 5, led 3 is missing
+uint8_t num_segments = sizeof(led_segments) / sizeof(led_segments[0]);
+CRGB color_wheel[] = {
+  CRGB::Red,
+  CRGB::Yellow,
+  CRGB::Lime,
+  //CRGB::Green,
+  CRGB::Aqua,
+  CRGB::Blue,
+  CRGB::Fuchsia,
+  // CRGB::Purple,
+  CRGB::Violet,
+  CRGB::White,
+  CRGB::Black,
+};
+uint8_t color_wheel_size = sizeof(color_wheel) / sizeof(color_wheel[0]);
+int8_t  wheel_index = 0;
 
 // VL53L0X SENSOR SETUP
 // The number of sensors in your system.
 #define SENSOR_COUNT 3
 VL53L0X sensors[SENSOR_COUNT];
 const uint8_t xshutPins[SENSOR_COUNT] = { 6, 7, 8 }; //s, 
-uint16_t update_delay = 200;
-// uint16_t distances[SENSOR_COUNT];
+uint16_t sample_delay = 50;
+const uint8_t update_interval = 1;
+uint8_t update_index = 0;
 TapDetection Taps[SENSOR_COUNT];
-RingBuffer<uint16_t> test_ring = RingBuffer<uint16_t>(16);
-size_t refresh = 0;
+size_t tap_buffer_size = Taps[0].distances.capacity();
 uint16_t dist = 0;
+// Multi-sensor gesture
+int complex_gesture(/*Taps*/);
+
 
 // Serial buffer
 char buffer[50];
 
-void march();
 
 void setup() {
   while (!Serial) {}
@@ -93,7 +109,7 @@ void setup() {
       Serial.print("Initializing sensor  ");
       Serial.println(i);
       sensors[i].setAddress(0x2A + i);
-      sensors[i].setTimeout(update_delay/2);
+      sensors[i].setTimeout(sample_delay/2);
     }
     for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
       Serial.print("Sensor "); Serial.print(i); Serial.println(":"); 
@@ -101,18 +117,21 @@ void setup() {
       Serial.println(sensors[i].getMeasurementTimingBudget());
       Serial.print("Timeout: ");
       Serial.println(sensors[i].getTimeout());
-      sensors[i].startContinuous(update_delay);
+      sensors[i].startContinuous(sample_delay);
     }
     Serial.println("VL53 sensors initialized.");
-  }
-
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++) {
-    
   }
 
 }
 
 void loop() {
+
+  static int led_indx = 0;
+  static int led_advance = 1;
+  static CRGB mycolor = color_wheel[wheel_index % color_wheel_size];
+
+  static int8_t check_gesture = 0;
+  
   for (size_t i = 0; i < SENSOR_COUNT; i++)  {
     dist = sensors[i].readRangeContinuousMillimeters();
     if (sensors[i].timeoutOccurred()) { 
@@ -126,50 +145,122 @@ void loop() {
     }
     Taps[i].update(dist);
   }
-
-
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++)  {
-    // if (Taps[i].get_gesture() == Gestures_t::NOT_READY) {
-    //   Serial.print("Sensor not ready "); Serial.println(i);
+  
+  // Check if there is a tap on any sensor.
+  // If so, reset the check_delay counter to CHECK_DELAY.
+  // This allows the other sensors to register gestures before
+  // testing for a swipe.
+  for (uint8_t i = 0; i  < SENSOR_COUNT; i++)  {
+    // if (Taps[i].get_gesture() > 0) {
+    //   Serial.print("Tap detected on sensor "); Serial.println(i);
     // }
-    if (Taps[i].get_gesture() > 0) {
-      Serial.print("Tap detected on sensor "); Serial.println(i);
+    check_gesture += Taps[i].gesture_available();
+  }
+
+  if (check_gesture > 2) {
+    check_gesture = 0;
+    int swipe = complex_gesture();
+  
+    if (swipe > 0) {
+      Serial.print("SWIPE: "); Serial.println(swipe);
+    }
+    if (swipe == 1) { // right
+      led_advance = 1;
+      mycolor = color_wheel[++wheel_index % color_wheel_size];
+    }
+    else if (swipe == 2) { // left
+      led_advance = 1;
+      mycolor = color_wheel[(wheel_index-2) % color_wheel_size];
+    }
+    else if (swipe == 3) { // up-right
+      led_advance = 1;
+      mycolor = color_wheel[++wheel_index % color_wheel_size];
+    }
+    else if (swipe == 4) { // down-left
+      led_advance = -1;
+      mycolor = color_wheel[(wheel_index-2) % color_wheel_size];
+    }
+    else if (swipe == 5) { // up-left
+      led_advance = 1;
+      mycolor = color_wheel[++wheel_index % color_wheel_size];
+    }
+    else if (swipe == 6) { // down-right
+      led_advance = -1;
+      mycolor = color_wheel[(wheel_index-2) % color_wheel_size];
+    }
+    if (swipe > 0) {
+      Serial.print("Wheel index (swipe): "); Serial.println(wheel_index);
+      swipe = 0;
     }
 
+    for (size_t i = 0; i < SENSOR_COUNT; i++) {
+      Taps[i].clear();
+    }
   }
- 
-  static int led_indx = 0;
-  static CRGB mycolor = CRGB::Blue;
+
   leds[led_indx] = mycolor;
-  if (++led_indx > NUM_LEDS) {
+  led_indx += led_advance;
+  if (led_indx >= NUM_LEDS) {
     led_indx = 0;
-    if (mycolor == CRGB::Blue){
-      mycolor = CRGB::Purple;
-    } else {
-      mycolor = CRGB::Blue;
-    }
+    mycolor = color_wheel[++wheel_index % color_wheel_size];
+    Serial.print("Wheel index (rollover): "); Serial.println(wheel_index);
   }
-  // for (uint8_t i = 0; i < NUM_LEDS; i++) {
-  //   leds[i] = CRGB::Red;
-  // }
-  // march();
+  if (led_indx < 0) {
+    led_indx = NUM_LEDS - 1;
+    mycolor = color_wheel[++wheel_index % color_wheel_size];
+    Serial.print("Wheel index (rollunder): "); Serial.println(wheel_index);
+  }
+
+  if (wheel_index < 0) {
+    wheel_index = color_wheel_size - 1;
+  }
+  else if (wheel_index >= color_wheel_size) {
+    wheel_index = 0;
+  }
+
   FastLED.show();
-  FastLED.delay(update_delay);
+  FastLED.delay(sample_delay);
 }
 
-void march(){
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
-      
+
+
+int complex_gesture(){
+  // 0 = Nothing
+  // 1 = swipe right
+  // 2 = swipe left
+  // 3 = swipe up-right
+  // 4 = swipe down-left
+  // 5 = swipe up-left
+  // 6 = swipe down-right
+
+  GestureEvent G[SENSOR_COUNT];
+  // uint32_t tap_indexes[SENSOR_COUNT];
+  // size_t tap_lengths[SENSOR_COUNT];
+
+  for (size_t i = 0; i < SENSOR_COUNT; i++) {
+    G[i] = Taps[i].pop_gesture();
   }
 
-}
-
-void rainbowCycle(void){
-  const uint8_t hue = 8;
-  for (uint8_t i = 0; i < NUM_LEDS; i++) {
-      leds[i].r = hue*i*(rainbow_counter + i + 0  ) % 256;
-      leds[i].g = hue*i*(rainbow_counter + i + 64 ) % 256;
-      leds[i].b = hue*i*(rainbow_counter + i + 128) % 256;
+  if ((G[0].tap_index < G[1].tap_index) && (G[1].tap_index < G[2].tap_index) && (G[2].tap_index != TAP_BUFFER_SIZE + 1)) {
+    return 1; // swipe right
+  } 
+  else if ((G[2].tap_index < G[1].tap_index) && (G[1].tap_index < G[0].tap_index) && (G[0].tap_index != TAP_BUFFER_SIZE + 1)) {
+    return 2; // swipe left
+  } 
+  else if (G[1].tap_length < G[2].tap_length) {
+    return 3; // swipe up-right
+  } 
+  else if (G[1].tap_length > G[2].tap_length) {
+    return 4; // swipe down-left
+  } 
+  else if (G[1].tap_length < G[0].tap_length) {
+    return 5; // swipe up-left
+  } 
+  else if (G[1].tap_length > G[0].tap_length) {
+    return 6; // swipe down-right
+  } 
+  else {
+    return 0; // no gesture detected
   }
-  ++rainbow_counter;
+
 }

@@ -3,10 +3,10 @@
 #include "RingBuffer.hpp"
 
 #define  TAP_BUFFER_SIZE 16
-
+#define  EVENT_BUFFER_SIZE 8
 
 enum Gestures_t{
-    NO_GESTURE                      = 0,    /*!< No gesture detected */
+    NONE                            = 0,    /*!< No gesture detected */
     SINGLE_TAP                      = 1,    /*!< Single tap detected */
     DOUBLE_TAP                      = 2,    /*!< Doubble tap detected */
     LONG_TAP                        = 3,    /*!< Double tap detected */
@@ -26,21 +26,32 @@ enum Gestures_t{
 };
 
 
-
+struct GestureEvent {
+    Gestures_t gesture;
+    uint32_t tap_index;   // sample index where tap started
+    size_t tap_length;  // number of samples in tap
+};
 
 class TapDetection {
 public:
     TapDetection();
-    int update(uint16_t distance);
-    int get_gesture();
+    uint32_t update(uint16_t distance);
+    int8_t gesture_available();
+    GestureEvent pop_gesture();
+    void clear();
     uint16_t tap_change_threshold = 50;   // mm
-    uint16_t abs_threshold = 30;         // mm
-    bool floating_threshold = false;     // allow floating threshold
+    //uint16_t abs_threshold = 30;          // mm
+    uint8_t  short_tap_threshold = 3;     // number of samples
+    bool floating_threshold = false;      // allow floating threshold
 
 
 // private:
+    uint32_t sample_index = 0;
     RingBuffer<uint16_t> distances{TAP_BUFFER_SIZE};  // note {} not () 
-
+    RingBuffer<int>        gesture{EVENT_BUFFER_SIZE};
+    RingBuffer<uint32_t>   gesture_index{EVENT_BUFFER_SIZE};
+    RingBuffer<size_t>     gesture_length{EVENT_BUFFER_SIZE};
+    void detect_gesture();
 };
 
 #endif //_TAPDETECTION_HPP_
